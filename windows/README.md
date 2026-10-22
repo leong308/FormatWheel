@@ -2,26 +2,108 @@
 
 Windows 10/11, 64-bit. This port implements the same **73 action IDs**, wheel pages and conversion/tool choices as the original macOS application. It adds a Windows tray application, a portable build and a per-user installer. The original Swift application remains in `Sources/`.
 
-## Install
+## Setup on Windows: follow these five steps
 
-Use `FormatWheel-Windows-x64-Setup.exe` from a Windows build of this fork. It installs for the current account in `%LOCALAPPDATA%\Programs\FormatWheel`, adds a Start menu shortcut and registers **FormatWheel for Windows** in Windows **Settings → Apps**. Installing the application itself does not require administrator access.
+Use this path to run the app. **Python, Git and a source-code build are not required.** You need Windows 10/11 x64 and an Internet connection for the initial downloads and extra conversion tools.
 
-Open **FormatWheel** from the Start menu. Its tray menu provides file/folder selection, a demo, recent outputs and settings. Quit the tray application before updating or uninstalling it. To uninstall, use Settings → Apps; separately installed conversion backends and user preferences/models remain available.
+### 1. Get the Windows installer
 
-For a portable installation, extract **all** files from `FormatWheel-Windows-x64.zip` into one folder, then run `FormatWheel.exe`. Keep `_internal`, both executables, notices and the other adjacent files together. Python is included in packaged builds; you do not need to install Python to run them.
+If you already have `FormatWheel-Windows-x64-Setup.exe`, continue to step 2. Otherwise:
 
-## Enable every conversion backend
+1. Sign in to GitHub and open this fork's [Windows build page](https://github.com/leong308/FormatWheel/actions/workflows/windows.yml).
+2. Open the newest completed run with a green check for `codex/windows-support`.
+3. Scroll to **Artifacts**, then click **FormatWheel-Windows-x64** to download the build ZIP.
+4. In File Explorer, right-click that downloaded ZIP → **Extract All…** → **Extract**.
+5. Open the extracted folder and find **FormatWheel-Windows-x64-Setup.exe**.
 
-The main package contains its Python libraries. Some actions also need external tools and a local foreground-removal model. A missing dependency leaves the action visible with an explanation.
+The build download contains these three files. Choose the installer for the steps below:
 
-From the installed/portable folder, run PowerShell:
+| File | What to do with it |
+| --- | --- |
+| `FormatWheel-Windows-x64-Setup.exe` | Run this to install the application. |
+| `FormatWheel-Windows-x64.zip` | Alternative portable app; see the portable instructions below. |
+| `FormatWheel-Windows-Source.zip` | Developer source code; it is not the application installer. |
+
+GitHub's **Code → Download ZIP** also downloads source code, not the ready-to-run Windows app. Build artifacts can expire; use a newer successful Windows build if an old download is unavailable.
+
+### 2. Install the app
+
+1. Double-click **FormatWheel-Windows-x64-Setup.exe**.
+2. In **FormatWheel Setup**, click **OK** to install for your Windows account.
+3. Wait for the **Installed** message, then click **OK**.
+
+The default installation folder is `%LOCALAPPDATA%\Programs\FormatWheel`. The installer adds a Start menu shortcut and an entry in **Settings → Apps**. Installing the app itself does not require administrator access. It does not automatically open the app; complete the extra-tool setup next.
+
+### 3. Install the extra conversion tools
+
+This adds FFmpeg for video/audio, LibreOffice for Office formats, and Tesseract plus English/Chinese OCR data. It also prepares a local background-removal model. Some wheel slots remain unavailable until their tools are installed.
+
+1. If FormatWheel is already running, right-click its tray icon near the clock → **退出格式轮盘 / Quit**. The icon may be under the **^** hidden-icons arrow.
+2. Open **Start**, search **Windows PowerShell**, and open it normally.
+3. Copy and paste this entire block into PowerShell, then press **Enter**:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Install-Dependencies.ps1 -WithCutout
-.\FormatWheel-cli.exe --doctor
+Set-Location (Join-Path $env:LOCALAPPDATA 'Programs\FormatWheel')
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Install-Dependencies.ps1 -WithCutout
 ```
 
-From a source checkout, the setup script is `windows\Install-Dependencies.ps1`. Setup uses `winget` and downloads the language data/model. Third-party installers can request administrator access. Restart FormatWheel after setup so it picks up installed tools.
+4. Follow any third-party installer prompts. Those installers may request administrator access. Wait until PowerShell prints **Dependencies prepared. Restart FormatWheel; conversions run locally without downloads.** If it reports an error, see troubleshooting below.
+5. **Close PowerShell.** Open a new Windows PowerShell window so it can see tool locations added to `PATH`.
+
+These commands assume the default install location. If you used the portable package, change to its extracted application folder instead. Running the dependency script from a source checkout does not install or build the FormatWheel application itself.
+
+### 4. Check that the tools were found
+
+In the **new** PowerShell window, paste:
+
+```powershell
+Set-Location (Join-Path $env:LOCALAPPDATA 'Programs\FormatWheel')
+.\FormatWheel-cli.exe --doctor
+$LASTEXITCODE
+```
+
+The diagnostic prints the action IDs and their readiness:
+
+- `"ready": true` means the action's dependency check passed.
+- `"ready": false` is followed by a `"note"` explaining what is missing.
+- The last line is `0` when all dependency checks pass, or `2` when something is missing.
+
+If an action is unavailable, follow its note, then close and reopen PowerShell before checking again. This diagnostic checks tool availability; it does not certify every input format, OCR language or conversion result.
+
+### 5. Open the app and make one real conversion
+
+1. Open **Start → FormatWheel**. The app lives in the system tray near the clock; a normal application window may not appear. Click **^** if its icon is hidden.
+2. If a **Demo** wheel appears, press **Esc** to close it. The demo does not convert a file, even if it displays **MISSION PASSED**.
+3. Right-click the tray icon → **选择文件打开轮盘… / Choose files…**.
+4. Select an existing **PNG** picture, then click the **JPG** slot on the wheel. Use a copy of a picture for your first test if you prefer.
+5. After **MISSION PASSED**, open the source picture's folder. A new JPG should be beside it; the PNG remains unchanged. If the source folder is not writable, use **Recent outputs** in the tray menu to reveal where the result was saved.
+
+After that test, try the shortcut: drag a file in Explorer, keep the left mouse button held, tap **Shift**, move toward a slot and release. The current-format slot is disabled; for example, PNG is disabled when the selected file is already PNG.
+
+## Portable setup instead of installing
+
+1. Extract the downloaded build ZIP first, then right-click its inner **FormatWheel-Windows-x64.zip** → **Extract All…**.
+2. Open the resulting application folder. It must contain **FormatWheel.exe**, **FormatWheel-cli.exe**, **Install-Dependencies.ps1** and **_internal**.
+3. Keep the entire folder together. Do not run the EXE from inside a ZIP or copy the EXE alone.
+4. Open PowerShell in this folder: click File Explorer's address bar, type `powershell`, then press **Enter**. Run the dependency command from step 3 without its `Set-Location` line.
+5. Close and reopen PowerShell in that folder, then run `.\FormatWheel-cli.exe --doctor`.
+6. Double-click **FormatWheel.exe** and follow the real-conversion test in step 5 above. Portable mode does not create the installer's Start menu shortcut.
+
+## Setup troubleshooting
+
+| What you see | What to do |
+| --- | --- |
+| `winget` is missing | Install or update Microsoft's **App Installer** in Microsoft Store ([Microsoft's instructions](https://learn.microsoft.com/en-us/windows/package-manager/winget/)). Open a new PowerShell window and rerun step 3. |
+| `Set-Location` cannot find the folder | Run the Setup EXE first. For portable mode, use the folder containing `FormatWheel.exe` instead of the default installed-folder command. |
+| `Install-Dependencies.ps1` or `FormatWheel-cli.exe` is not found | You are in the wrong folder, or have downloaded source code. Follow step 1 and extract the build; the installed/portable folder contains both files. |
+| A slot says **未装备** | Its tool was not found. Run step 4, follow the matching action's note, and restart FormatWheel after installing the tool. |
+| Nothing happens when starting the app | Check the **^** tray menu near the clock. Right-click FormatWheel's icon for file selection and settings. |
+| Demo says **MISSION PASSED**, but no output appears | The demo does not convert files. Use **Choose files…** with an actual PNG and select JPG. |
+| Drag-and-Shift does not open the wheel | Use the tray's **Choose files…** route. Avoid dragging from an application running as administrator into the normal tray app. |
+
+To restart, update or uninstall, use the tray's **Quit** command first. Closing the drop window does not quit the tray application. Uninstall through **Settings → Apps → FormatWheel for Windows**; separately installed tools and user preferences/models remain available.
+
+## Conversion tools and file locations
 
 | Dependency | Enables |
 | --- | --- |
@@ -32,7 +114,7 @@ From a source checkout, the setup script is `windows\Install-Dependencies.ps1`. 
 
 The script places OCR data in `%LOCALAPPDATA%\FormatWheel\tessdata` and the model in `%LOCALAPPDATA%\FormatWheel\models`. Builds also include the verified small cutout model. For model-only setup, use `Install-Dependencies.ps1 -ModelsOnly`. These downloads happen during preparation; conversions process files locally. FormatWheel does not upload source files to a conversion service.
 
-Manual tool installations are supported through `PATH`, common Windows installation folders, or `FORMATWHEEL_FFMPEG`, `FORMATWHEEL_FFPROBE`, `FORMATWHEEL_SOFFICE` and `FORMATWHEEL_TESSERACT` environment variables containing executable paths. `U2NET_HOME` can point to an existing local model directory. Run `--doctor` to inspect readiness; unavailable backends produce a nonzero diagnostic exit status.
+Manual tool installations are supported through `PATH`, common Windows installation folders, or `FORMATWHEEL_FFMPEG`, `FORMATWHEEL_FFPROBE`, `FORMATWHEEL_SOFFICE` and `FORMATWHEEL_TESSERACT` environment variables containing executable paths. `U2NET_HOME` can point to an existing local model directory.
 
 ## Use the wheel
 
