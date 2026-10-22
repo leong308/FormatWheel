@@ -4,6 +4,8 @@
 
 <h1 align="center">格式轮盘 FormatWheel</h1>
 
+> **Windows 10/11 x64:** this fork adds a Windows tray app, portable ZIP and per-user installer with the same 73 action IDs. See the [Windows installation and build guide](windows/README.md) for dependencies, verification limits and platform differences. Windows packages include AGPL-licensed components; see [third-party notices](windows/THIRD-PARTY-NOTICES.md). The macOS instructions below remain applicable to the original Swift application.
+
 <p align="center">
   <b>拖住文件，按一下 ⇧ Shift，朝格子一甩，松手 —— 转好了。</b><br>
   住在 macOS 菜单栏里的格式转换轮盘：图片、PDF、视频、音频、文档，70 多种转换和小工具，全程在本机完成。

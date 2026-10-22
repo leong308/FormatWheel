@@ -1,0 +1,12 @@
+# Keep the Qt wheels replaceable in the onedir package (LGPL).
+PySide6-Essentials==6.10.3
+Pillow==12.1.1
+pillow-heif==1.2.1
+PyMuPDF==1.26.7
+python-docx==1.2.0
+Markdown==3.10.2
+beautifulsoup4==4.14.3
+striprtf==0.0.29
+pywin32==311; sys_platform == "win32"
+rembg==2.0.72
+onnxruntime==1.23.2

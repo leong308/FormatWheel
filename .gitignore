@@ -3,3 +3,11 @@ dist/
 宣传片/
 screenshots/
 .DS_Store
+windows/.venv/
+windows/.tools/
+windows/artifacts/
+windows/.pytest_cache/
+__pycache__/
+*.pyc
+*.spec
+.pytest_cache/
