@@ -1,5 +1,6 @@
 """Build replaceable-library portable apps, a per-user setup EXE and matching source."""
 from pathlib import Path
+import argparse
 import importlib.metadata
 import json
 import os
@@ -13,6 +14,9 @@ BUILD = ROOT / "build/windows"
 DIST = ROOT / "dist/windows"
 BUILD.mkdir(parents=True, exist_ok=True)
 DIST.mkdir(parents=True, exist_ok=True)
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--reuse-app", action="store_true", help="Repackage an already compiled app after data-only fixes")
+arguments = parser.parse_args()
 
 spec = BUILD / "FormatWheel.spec"
 spec.write_text('''from PyInstaller.utils.hooks import collect_all, collect_submodules
@@ -27,13 +31,29 @@ hiddenimports += collect_submodules('win32com')
 a = Analysis([str(ROOT / 'windows/launcher.py')], pathex=[str(ROOT / 'windows')],
              binaries=binaries, datas=datas, hiddenimports=hiddenimports,
              excludes=['tkinter', 'matplotlib', 'IPython', 'pytest', 'torch', 'tensorflow'])
+# Qt uses Windows' system ICU API. Third-party ICU DLLs found on a builder's
+# PATH can have incompatible suffixed exports and must not shadow Windows ICU.
+a.binaries = [entry for entry in a.binaries if __import__('pathlib').Path(entry[0]).name.lower() not in ('icuuc.dll', 'icudt78.dll')]
 pyz = PYZ(a.pure)
 gui = EXE(pyz, a.scripts, [], exclude_binaries=True, name='FormatWheel', console=False)
 cli = EXE(pyz, a.scripts, [], exclude_binaries=True, name='FormatWheel-cli', console=True)
 coll = COLLECT(gui, cli, a.binaries, a.datas, name='FormatWheel')
 '''.replace("datas =", f"ROOT = __import__('pathlib').Path({str(ROOT)!r})\ndatas =", 1), encoding="utf-8")
-subprocess.run([sys.executable, "-m", "PyInstaller", "--noconfirm", "--distpath", str(DIST), "--workpath", str(BUILD), str(spec)], check=True)
+if not arguments.reuse_app:
+    build_environment = dict(os.environ)
+    build_environment["PATH"] = os.pathsep.join([str(Path(sys.executable).parent), str(Path(sys.base_prefix)), str(Path(os.environ["WINDIR"]) / "System32"), os.environ["WINDIR"]])
+    subprocess.run([sys.executable, "-m", "PyInstaller", "--noconfirm", "--distpath", str(DIST), "--workpath", str(BUILD), str(spec)], env=build_environment, check=True)
 app = DIST / "FormatWheel"
+if not (app / "FormatWheel.exe").is_file():
+    raise RuntimeError("Build the application before using --reuse-app")
+for accidental_system_library in ("icuuc.dll", "icudt78.dll"):
+    (app / "_internal" / accidental_system_library).unlink(missing_ok=True)
+# pymatting queries its distribution version during import. Its code is detected
+# by PyInstaller, but importlib.metadata also requires this separate metadata.
+distribution = importlib.metadata.distribution("pymatting")
+metadata = next(Path(distribution.locate_file(file)).parent for file in distribution.files
+                if file.name == "METADATA" and file.parent.name.endswith(".dist-info"))
+shutil.copytree(metadata, app / "_internal" / metadata.name, dirs_exist_ok=True)
 for source, target in ((ROOT / "LICENSE", "LICENSE-MIT.txt"), (ROOT / "windows/LICENSE-AGPL-3.0.txt", "LICENSE-AGPL-3.0.txt"),
                        (ROOT / "windows/THIRD-PARTY-NOTICES.md", "THIRD-PARTY-NOTICES.md"), (ROOT / "windows/README.md", "WINDOWS-README.md"),
                        (ROOT / "windows/Install-Dependencies.ps1", "Install-Dependencies.ps1"), (ROOT / "windows/uninstall.ps1", "uninstall.ps1")):

@@ -101,7 +101,7 @@ class MediaIntegrationTests(unittest.TestCase):
         self.assertEqual(len(result.outputs), 1)
         path = Path(result.outputs[0])
         self.assertTrue(path.is_file(), f"No output for {action}")
-        self.assertEqual(path.parent, source.parent)
+        self.assertEqual(path.parent.resolve(), source.parent.resolve())
         self.assertNotEqual(path, source)
         return path
 

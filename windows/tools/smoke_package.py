@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 from pathlib import Path
 import subprocess
 import tempfile
+import wave
 import zipfile
 
 from PIL import Image, ImageDraw, ImageOps
@@ -35,7 +37,8 @@ def main() -> int:
 
     def invoke(*arguments):
         process = subprocess.run([str(executable), *map(str, arguments)], capture_output=True,
-                                 encoding="utf-8", errors="replace", timeout=120)
+                                 encoding="utf-8", errors="replace", timeout=120,
+                                 env=os.environ | {"QT_QPA_PLATFORM": "offscreen"})
         if process.returncode:
             raise AssertionError(f"Frozen CLI exit {process.returncode}: {' '.join(map(str, arguments))}\n{process.stdout}\n{process.stderr}")
         return process.stdout
@@ -171,6 +174,23 @@ def main() -> int:
             output = run("img.cutout", subject)[0]
             with Image.open(output) as result:
                 assert result.mode == "RGBA" and result.getchannel("A").getextrema() == (0, 255)
+        for flag, name in (("--snapshot", "wheel.png"), ("--glyphs", "glyphs.png"), ("--weapons", "weapons.png")):
+            output = folder / name
+            invoke(flag, output)
+            with Image.open(output) as result:
+                result.load()
+                assert min(result.size) > 100 and result.getbbox(), flag
+            checks += 1
+            print("PASS offscreen " + flag)
+        sounds = folder / "sounds"
+        invoke("--sounds", sounds)
+        tracks = list(sounds.glob("*.wav"))
+        assert len(tracks) >= 8
+        for track in tracks:
+            with wave.open(str(track)) as audio:
+                assert audio.getnframes() > 0 and audio.getframerate() >= 22050
+        checks += 1
+        print("PASS sound exports")
         assert hashlib.sha256(source.read_bytes()).digest() == original_hash, "Input image was modified"
     print(f"Frozen package: {checks} checks passed.")
     return 0
