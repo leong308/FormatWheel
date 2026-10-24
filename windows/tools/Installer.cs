@@ -40,14 +40,14 @@ class Installer {
         catch (DirectoryNotFoundException) { }
     }
 
-    static HashSet<string> ManifestPaths(string root, string json) {
+    static HashSet<string> ManifestPaths(string root, string json, bool allowDuplicates = false) {
         object[] entries = new JavaScriptSerializer().DeserializeObject(json) as object[];
         if (entries == null) throw new IOException("The installation manifest must be an array of file paths.");
         HashSet<string> paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (object entry in entries) {
             string relative = entry as string;
             string target = OwnedPath(root, relative);
-            if (!paths.Add(target)) throw new IOException("Duplicate installation manifest path.");
+            if (!paths.Add(target) && !allowDuplicates) throw new IOException("Duplicate installation manifest path.");
         }
         return paths;
     }
@@ -55,7 +55,9 @@ class Installer {
     static void ExtractAndUpdate(string root, ZipArchive archive) {
         string manifestPath = OwnedPath(root, "installed-files.json");
         HashSet<string> previous = File.Exists(manifestPath)
-            ? ManifestPaths(root, File.ReadAllText(manifestPath))
+            // Older --reuse-app builds could append installed-files.json twice.
+            // Validate every legacy entry, but deduplicate its ownership list for upgrades.
+            ? ManifestPaths(root, File.ReadAllText(manifestPath), true)
             : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         Dictionary<string, ZipArchiveEntry> files = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
         List<string> directories = new List<string>();
