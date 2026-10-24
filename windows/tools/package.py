@@ -83,7 +83,7 @@ with zipfile.ZipFile(portable, "w", zipfile.ZIP_DEFLATED, compresslevel=5) as ar
             archive.write(path, path.relative_to(app).as_posix())
 compiler = Path(os.environ["WINDIR"]) / "Microsoft.NET/Framework64/v4.0.30319/csc.exe"
 setup = DIST / "FormatWheel-Windows-x64-Setup.exe"
-subprocess.run([str(compiler), "/nologo", "/target:winexe", "/optimize+", f"/out:{setup}", "/r:System.Windows.Forms.dll", "/r:System.IO.Compression.dll", "/r:System.IO.Compression.FileSystem.dll", "/r:Microsoft.CSharp.dll", f"/resource:{portable},payload.zip", str(ROOT / "windows/tools/Installer.cs")], check=True)
+subprocess.run([str(compiler), "/nologo", "/target:winexe", "/optimize+", f"/out:{setup}", "/r:System.Windows.Forms.dll", "/r:System.IO.Compression.dll", "/r:System.IO.Compression.FileSystem.dll", "/r:System.Web.Extensions.dll", "/r:Microsoft.CSharp.dll", f"/resource:{portable},payload.zip", str(ROOT / "windows/tools/Installer.cs")], check=True)
 source_zip = DIST / "FormatWheel-Windows-Source.zip"
 tracked = subprocess.check_output(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"], cwd=ROOT).decode().split("\0")
 with zipfile.ZipFile(source_zip, "w", zipfile.ZIP_DEFLATED) as archive:
