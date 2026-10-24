@@ -23,6 +23,7 @@ def main(argv=None):
     mode.add_argument("--scan", nargs="+", type=Path, metavar="FILE")
     mode.add_argument("--doctor", action="store_true", help="Report conversion backend readiness")
     mode.add_argument("--snapshot", type=Path, metavar="PNG")
+    mode.add_argument("--zip-progress-snapshot", type=Path, metavar="PNG", help="Render a sample ZIP progress panel for diagnostics")
     mode.add_argument("--weapons", type=Path, metavar="PNG")
     mode.add_argument("--glyphs", type=Path, metavar="PNG")
     mode.add_argument("--sounds", type=Path, metavar="FOLDER")
@@ -84,7 +85,7 @@ def main(argv=None):
             logging.exception("Conversion failed: %s", action)
             print(f"FAIL {action}: {error}", file=sys.stderr)
             return 1
-    if sys.platform != "win32" and not args.snapshot:
+    if sys.platform != "win32" and not (args.snapshot or args.zip_progress_snapshot):
         parser.error("The tray application requires Windows 10 or later.")
     if args.crew or args.size:
         from .settings import Settings
@@ -96,6 +97,10 @@ def main(argv=None):
     if args.snapshot:
         from .ui import snapshot
         snapshot(args.snapshot, args.snapshot_files or args.files, page=args.page, hover=args.hover)
+        return 0
+    if args.zip_progress_snapshot:
+        from .progress_ui import progress_snapshot
+        progress_snapshot(args.zip_progress_snapshot)
         return 0
     if args.weapons or args.glyphs:
         from .ui import export_contact_sheet

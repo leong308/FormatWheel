@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+import threading
 import time
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, QRectF, QRunnable, Qt, QThreadPool, QTimer, Signal, QUrl
@@ -20,7 +21,8 @@ from PySide6.QtWidgets import (QApplication, QFileDialog, QGraphicsBlurEffect, Q
 from . import catalog, win32
 from .drawing import (GOLD, LOSS, WHITE, font, glyph, paint_stats, paint_wanted, paint_wheel,
                       panel, slot_at, text, tray_icon, weapon, weapon_name)
-from .engine import Engine, find_tool, scan_privacy
+from .engine import Engine, OperationCancelled, OperationControl, find_tool, scan_privacy
+from .progress_ui import ZipProgressPanel
 from .settings import CREWS, SIZES, Settings
 from .sound import Sounds
 
@@ -35,7 +37,7 @@ def supports_copy(event):
 
 class TaskSignals(QObject):
     done = Signal(object)
-    failed = Signal(str)
+    failed = Signal(object)
     progress = Signal(object)
 
 
@@ -49,8 +51,37 @@ class Task(QRunnable):
         try:
             self.signals.done.emit(self.function(self.signals.progress.emit))
         except Exception as error:
-            log.exception("Background operation failed")
-            self.signals.failed.emit(str(error))
+            if not isinstance(error, OperationCancelled):
+                log.exception("Background operation failed")
+            self.signals.failed.emit(error)
+
+
+class ProgressMailbox(QObject):
+    """Coalesce worker updates before Qt queues them, retaining the latest real value."""
+    ready = Signal()
+
+    def __init__(self, deliver):
+        super().__init__()
+        self.deliver = deliver
+        self.lock = threading.Lock()
+        self.latest = None
+        self.pending = False
+        self.ready.connect(self.flush, Qt.ConnectionType.QueuedConnection)
+
+    def push(self, value):
+        with self.lock:
+            self.latest = value
+            notify = not self.pending
+            self.pending = True
+        if notify:
+            self.ready.emit()
+
+    def flush(self):
+        with self.lock:
+            value, self.latest = self.latest, None
+            self.pending = False
+        if value is not None:
+            self.deliver(value)
 
 
 def screen_for(point=None):
@@ -668,6 +699,8 @@ class TrayApplication(QObject):
         self.overlay = Overlay(self.settings, self.sounds, self)
         self.overlay.chosen.connect(self.run_action)
         self.banner, self.busy = Banner(), Busy()
+        self.zip_progress = ZipProgressPanel(self.settings.accent)
+        self.zip_control = None
         self.wanted_hud = WantedHUD()
         self.dock = DropDock(self)
         self.tray = QSystemTrayIcon(tray_icon(self.settings.accent), self)
@@ -693,22 +726,31 @@ class TrayApplication(QObject):
     def submit(self, function, complete, failed=None, progress=None):
         task = Task(function)
         self.tasks.add(task)
+        mailbox = ProgressMailbox(progress) if progress else None
+        task.progress_mailbox = mailbox
         def done(result):
+            if mailbox:
+                mailbox.flush()
             self.tasks.discard(task)
             complete(result)
         def error(message):
+            if mailbox:
+                mailbox.flush()
             self.tasks.discard(task)
             if failed:
                 failed(message)
         task.signals.done.connect(done, Qt.ConnectionType.QueuedConnection)
         task.signals.failed.connect(error, Qt.ConnectionType.QueuedConnection)
         if progress:
-            task.signals.progress.connect(progress, Qt.ConnectionType.QueuedConnection)
+            task.signals.progress.connect(mailbox.push, Qt.ConnectionType.DirectConnection)
         self.pool.start(task)
 
     def shutdown(self):
         self.watcher.timer.stop()
         self.tray.hide()
+        if self.zip_control and self.zip_progress.active:
+            # Session shutdown must also release a worker waiting in Pause.
+            self.zip_control.cancel()
         # Qt waits for conversions to finish rather than destroying an active worker.
         self.pool.waitForDone()
 
@@ -748,7 +790,10 @@ class TrayApplication(QObject):
 
     def tray_clicked(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
-            self.show_dock()
+            if self.zip_progress.active:
+                self.zip_progress.restore()
+            else:
+                self.show_dock()
 
     def message_clicked(self):
         if self.last_error:
@@ -788,6 +833,8 @@ class TrayApplication(QObject):
         self.menu.addAction("选择文件打开轮盘… / Choose files…", self.choose_files)
         self.menu.addAction("选择文件夹… / Choose folder…", self.choose_folder)
         self.menu.addAction("打开拖放窗口 / Open drop window", self.show_dock)
+        if self.zip_progress.control is not None:
+            self.menu.addAction("显示 ZIP 进度 / Show ZIP progress", self.zip_progress.restore)
         recent = self.menu.addMenu("最近转换 · 在资源管理器显示 / Recent outputs")
         for name in self.settings.get("recents"):
             path = Path(name)
@@ -845,8 +892,17 @@ class TrayApplication(QObject):
         self.running = True
         self.last_error = ""
         wanted_level = self.overlay.wanted_level
-        self.busy.display(f"{option.title}…")
+        is_zip = option.id == "gen.zip"
+        if is_zip:
+            self.zip_control = OperationControl()
+            self.zip_progress.begin(self.zip_control)
+        else:
+            self.zip_progress.hide()
+            self.busy.display(f"{option.title}…")
         def progress(value):
+            if is_zip and hasattr(value, "phase"):
+                self.zip_progress.apply_update(value)
+                return
             try:
                 percent = int(float(value)*100)
                 self.busy.label = f"{option.title}… {max(0, min(100, percent))}%"
@@ -855,6 +911,8 @@ class TrayApplication(QObject):
         def complete(result):
             self.running = False
             self.busy.dismiss()
+            if is_zip:
+                self.zip_progress.finish(result.outputs)
             if result.clip is not None:
                 QApplication.clipboard().setText(result.clip)
             if result.outputs:
@@ -874,14 +932,24 @@ class TrayApplication(QObject):
             if self.settings.get("banner"):
                 self.banner.display(True, option.title, detail)
             self.tray.showMessage(f"MISSION PASSED · {option.title}", detail, QSystemTrayIcon.MessageIcon.Information, 5000)
-        def failed(message):
+        def failed(error):
             self.running = False
             self.busy.dismiss()
+            if isinstance(error, OperationCancelled):
+                if is_zip:
+                    self.zip_progress.cancelled()
+                self.last_error = ""
+                self.tray.showMessage("ZIP 已取消 / ZIP canceled", "未完成的 ZIP 已清理，原文件保留。 / Partial archive removed. Originals kept.", QSystemTrayIcon.MessageIcon.Information, 5000)
+                return
+            message = str(error)
+            if is_zip:
+                self.zip_progress.failed(message)
             self.last_error = message
             self.sounds.play("wasted")
             self.banner.display(False, option.title, message)
             self.tray.showMessage(f"WASTED · {option.title}", message, QSystemTrayIcon.MessageIcon.Warning, 10000)
-        self.submit(lambda notify: Engine.run(option.id, files, progress=notify), complete, failed, progress)
+        control = self.zip_control if is_zip else None
+        self.submit(lambda notify: Engine.run(option.id, files, progress=notify, control=control), complete, failed, progress)
 
 
 def application():

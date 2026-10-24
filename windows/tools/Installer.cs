@@ -126,7 +126,7 @@ class Installer {
             shortcut.Save();
             using (RegistryKey key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\FormatWheel")) {
                 key.SetValue("DisplayName", "FormatWheel for Windows");
-                key.SetValue("DisplayVersion", "1.0.0.windows.1");
+                key.SetValue("DisplayVersion", "1.0.0.windows.2");
                 key.SetValue("Publisher", "FormatWheel contributors");
                 key.SetValue("InstallLocation", root);
                 key.SetValue("DisplayIcon", Path.Combine(root, "FormatWheel.exe"));

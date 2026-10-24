@@ -174,7 +174,7 @@ def main() -> int:
             output = run("img.cutout", subject)[0]
             with Image.open(output) as result:
                 assert result.mode == "RGBA" and result.getchannel("A").getextrema() == (0, 255)
-        for flag, name in (("--snapshot", "wheel.png"), ("--glyphs", "glyphs.png"), ("--weapons", "weapons.png")):
+        for flag, name in (("--snapshot", "wheel.png"), ("--zip-progress-snapshot", "zip-progress.png"), ("--glyphs", "glyphs.png"), ("--weapons", "weapons.png")):
             output = folder / name
             invoke(flag, output)
             with Image.open(output) as result:

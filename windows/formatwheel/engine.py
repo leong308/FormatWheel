@@ -21,10 +21,13 @@ import os
 import plistlib
 import re
 import shutil
+import stat
 import struct
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 import unicodedata
 import xml.etree.ElementTree as ET
 import zipfile
@@ -38,11 +41,96 @@ try:
 except ImportError:
     pillow_heif = None
 
-Progress = Callable[[float], None]
-
-
 class FormatWheelError(RuntimeError):
     """An actionable conversion error suitable for the result banner."""
+
+
+class OperationCancelled(FormatWheelError):
+    """A user cancellation; partial results have been removed."""
+
+
+class OperationControl:
+    """Cooperative controls shared between a worker and its user interface."""
+
+    def __init__(self):
+        self._condition = threading.Condition()
+        self._paused = False
+        self._cancelled = False
+        self._paused_since: float | None = None
+        self._paused_total = 0.0
+
+    @property
+    def is_paused(self) -> bool:
+        with self._condition:
+            return self._paused
+
+    @property
+    def is_cancelled(self) -> bool:
+        with self._condition:
+            return self._cancelled
+
+    @property
+    def paused_seconds(self) -> float:
+        with self._condition:
+            return self._paused_total + (time.monotonic() - self._paused_since if self._paused_since is not None else 0)
+
+    def pause(self):
+        with self._condition:
+            if not self._paused and not self._cancelled:
+                self._paused = True
+                self._paused_since = time.monotonic()
+
+    def _end_pause(self):
+        if self._paused_since is not None:
+            self._paused_total += time.monotonic() - self._paused_since
+            self._paused_since = None
+        self._paused = False
+
+    def resume(self):
+        with self._condition:
+            self._end_pause()
+            self._condition.notify_all()
+
+    def cancel(self):
+        with self._condition:
+            self._cancelled = True
+            self._end_pause()
+            self._condition.notify_all()
+
+    def checkpoint(self, on_pause: Callable[[], None] | None = None):
+        announced = False
+        while True:
+            with self._condition:
+                if self._cancelled:
+                    raise OperationCancelled("Operation cancelled. The partial output was removed.")
+                if not self._paused:
+                    return
+            if not announced and on_pause:
+                # Never invoke external callbacks while holding the condition lock.
+                announced = True
+                on_pause()
+            with self._condition:
+                if self._paused and not self._cancelled:
+                    self._condition.wait()
+
+
+@dataclass(frozen=True)
+class ProgressUpdate:
+    fraction: float | None = None
+    phase: str = "scanning"
+    processed_bytes: int = 0
+    total_bytes: int = 0
+    files_completed: int = 0
+    files_total: int = 0
+    current_file: str = ""
+    output_path: Path | None = None
+    archive_bytes: int = 0
+    elapsed: float = 0.0
+    speed_bps: float | None = None
+    eta_seconds: float | None = None
+
+
+Progress = Callable[[float | ProgressUpdate], None]
 
 
 @dataclass
@@ -301,14 +389,18 @@ def action_availability(action_id: str, files: Iterable[Path] = ()) -> tuple[boo
 
 class Engine:
     @staticmethod
-    def run(action_id: str, files: Iterable[Path | str], progress: Progress | None = None) -> RunResult:
+    def run(action_id: str, files: Iterable[Path | str], progress: Progress | None = None,
+            control: OperationControl | None = None) -> RunResult:
         paths = [Path(p).expanduser().resolve() for p in files]
         if not paths:
             raise FormatWheelError("Drop at least one file first.")
         if any(not p.exists() for p in paths):
             raise FormatWheelError("An input file no longer exists.")
         callback = progress or (lambda _value: None)
-        callback(0)
+        if action_id != "gen.zip":
+            if control:
+                control.checkpoint()
+            callback(0)
         dominant = Counter(_kind(p) for p in paths).most_common(1)[0][0]
         targets = [p for p in paths if action_id.startswith("gen.") or _kind(p) == dominant]
         whole_selection = action_id in {"pdf.merge", "gen.zip", "gen.path", "gen.name"} or (action_id == "img.to.pdf" and len(paths) > 1)
@@ -320,9 +412,7 @@ class Engine:
             callback(1)
             return RunResult(note="Copied to the clipboard.", clip=text)
         if action_id == "gen.zip":
-            result = _zip(paths)
-            callback(1)
-            return result
+            return _zip(paths, callback, control or OperationControl())
         if action_id == "pdf.merge" or (action_id == "img.to.pdf" and len(paths) > 1):
             result = _merge(paths, callback)
             callback(1)
@@ -369,29 +459,211 @@ def _run_one(action: str, source: Path, progress: Progress) -> RunResult:
     raise FormatWheelError(f"Unknown action: {action}")
 
 
-def _zip(paths: list[Path]) -> RunResult:
+_ZIP_CHUNK_SIZE = 1024 * 1024
+_ZIP_PROGRESS_INTERVAL = 0.08
+
+
+@dataclass(frozen=True)
+class _ZipEntry:
+    path: Path
+    name: str
+    size: int
+    mtime_ns: int
+    ctime_ns: int
+    device: int
+    inode: int
+    directory: bool
+
+    def unchanged(self, current: os.stat_result) -> bool:
+        return (not self.directory and stat.S_ISREG(current.st_mode)
+                and (current.st_size, current.st_mtime_ns, current.st_ctime_ns, current.st_dev, current.st_ino)
+                == (self.size, self.mtime_ns, self.ctime_ns, self.device, self.inode))
+
+
+class _ZipProgress:
+    def __init__(self, callback: Callable[[ProgressUpdate], None], control: OperationControl):
+        self.callback, self.control = callback, control
+        self.started = time.monotonic()
+        self.last_emitted = -float("inf")
+        self.phase = "scanning"
+        self.processed_bytes = self.total_bytes = 0
+        self.files_completed = self.files_total = 0
+        self.current_file = ""
+        self.output_path: Path | None = None
+        self.compression_started: float | None = None
+        self.paused_before_compression = 0.0
+
+    def emit(self, phase: str | None = None, *, force: bool = False):
+        now = time.monotonic()
+        if phase is not None and phase != self.phase:
+            self.phase, force = phase, True
+        if not force and now - self.last_emitted < _ZIP_PROGRESS_INTERVAL:
+            return
+        self.last_emitted = now
+        if self.compression_started is None and self.phase == "compressing":
+            self.compression_started = now
+            self.paused_before_compression = self.control.paused_seconds
+        if self.phase == "completed":
+            fraction = 1.0
+        elif self.phase == "scanning" or self.phase == "paused" and self.compression_started is None:
+            fraction = None
+        else:
+            fraction = min(self.processed_bytes / self.total_bytes, math.nextafter(1.0, 0.0)) if self.total_bytes else 0.0
+        speed = eta = None
+        if self.phase == "compressing" and self.compression_started is not None:
+            active = now - self.compression_started - (self.control.paused_seconds - self.paused_before_compression)
+            if active >= .1 and self.processed_bytes:
+                speed = self.processed_bytes / active
+                if self.total_bytes > self.processed_bytes:
+                    eta = (self.total_bytes - self.processed_bytes) / speed
+        archive_bytes = 0
+        if self.output_path is not None:
+            try:
+                archive_bytes = self.output_path.stat().st_size
+            except OSError:
+                pass
+        self.callback(ProgressUpdate(fraction, self.phase, self.processed_bytes, self.total_bytes,
+                                     self.files_completed, self.files_total, self.current_file,
+                                     self.output_path, archive_bytes, now - self.started, speed, eta))
+
+    def checkpoint(self):
+        phase = self.phase
+        paused = False
+        def announce_pause():
+            nonlocal paused
+            paused = True
+            self.emit("paused", force=True)
+        self.control.checkpoint(announce_pause)
+        if paused:
+            self.emit(phase, force=True)
+
+
+def _zip_link(path: Path, attributes: os.stat_result) -> bool:
+    # Directory junctions need the same treatment as symlinks; OneDrive cloud
+    # placeholders use other reparse tags and remain ordinary input files.
+    return stat.S_ISLNK(attributes.st_mode) or getattr(attributes, "st_reparse_tag", 0) == getattr(stat, "IO_REPARSE_TAG_MOUNT_POINT", -1)
+
+
+def _zip_scan(paths: list[Path], reporter: _ZipProgress) -> list[_ZipEntry]:
+    entries: list[_ZipEntry] = []
     used: set[str] = set()
+
+    def visit(path: Path, name: str):
+        reporter.checkpoint()
+        attributes = path.lstat()
+        if _zip_link(path, attributes):
+            return
+        directory = stat.S_ISDIR(attributes.st_mode)
+        if not directory and not stat.S_ISREG(attributes.st_mode):
+            raise FormatWheelError(f"Cannot archive this special file: {path.name}")
+        entry = _ZipEntry(path, name + "/" if directory else name,
+                          0 if directory else attributes.st_size,
+                          attributes.st_mtime_ns, attributes.st_ctime_ns,
+                          attributes.st_dev, attributes.st_ino, directory)
+        entries.append(entry)
+        if not directory:
+            reporter.total_bytes += entry.size
+            reporter.files_total += 1
+        reporter.current_file = name
+        reporter.emit()
+        if directory:
+            with os.scandir(path) as children:
+                ordered = []
+                for child in children:
+                    reporter.checkpoint()
+                    ordered.append(child)
+                    reporter.emit()
+                ordered.sort(key=lambda child: child.name.casefold())
+            for child in ordered:
+                visit(Path(child.path), name + "/" + child.name)
+
+    for path in paths:
+        name, n = path.name, 2
+        while name.casefold() in used:
+            name = f"{path.stem} {n}{path.suffix}"
+            n += 1
+        used.add(name.casefold())
+        try:
+            visit(path, name)
+        except OSError as exc:
+            raise FormatWheelError(f"Could not scan {path.name}: {exc}") from exc
+    return entries
+
+
+def _zip_changed(entry: _ZipEntry):
+    raise FormatWheelError(f"{entry.path.name} changed while creating the archive. No archive was kept; retry when the file has finished saving.")
+
+
+def _zip(paths: list[Path], progress: Callable[[ProgressUpdate], None], control: OperationControl) -> RunResult:
+    reporter = _ZipProgress(progress, control)
+    reporter.emit("scanning", force=True)
+    entries = _zip_scan(paths, reporter)
+    reporter.checkpoint()
+    first_chunk = True
     with _output(paths[0], "zip", "" if len(paths) == 1 else f"Archive {len(paths)} items") as out:
-        with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as archive:
-            for path in paths:
-                name = path.name
-                n = 2
-                while name.casefold() in used:
-                    name = f"{path.stem} {n}{path.suffix}"
-                    n += 1
-                used.add(name.casefold())
-                if path.is_dir():
-                    archive.writestr(name + "/", b"")
-                    for child in sorted(path.rglob("*")):
-                        if child.is_symlink() or child.resolve() == out.resolve():
-                            continue
-                        relative = name + "/" + child.relative_to(path).as_posix()
-                        if child.is_dir():
-                            archive.writestr(relative + "/", b"")
-                        else:
-                            archive.write(child, relative)
-                else:
-                    archive.write(path, name)
+        reporter.output_path = out
+        reporter.current_file = ""
+        reporter.emit("compressing", force=True)
+        reporter.checkpoint()
+        with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, allowZip64=True) as archive:
+            for entry in entries:
+                reporter.checkpoint()
+                reporter.current_file = entry.name
+                # The complete manifest is made before output creation, so even a
+                # selected ancestor directory can never contain this new archive.
+                if entry.path.resolve() == out.resolve():
+                    continue
+                if entry.directory:
+                    archive.writestr(zipfile.ZipInfo.from_file(entry.path, entry.name), b"")
+                    reporter.emit()
+                    continue
+                try:
+                    with entry.path.open("rb") as source:
+                        if not entry.unchanged(os.fstat(source.fileno())):
+                            _zip_changed(entry)
+                        info = zipfile.ZipInfo.from_file(entry.path, entry.name)
+                        info.compress_type = zipfile.ZIP_DEFLATED
+                        info._compresslevel = archive.compresslevel
+                        zip64 = entry.size * 1.05 > zipfile.ZIP64_LIMIT
+                        remaining = entry.size
+                        with archive.open(info, "w", force_zip64=zip64) as compressed:
+                            while remaining:
+                                reporter.checkpoint()
+                                chunk = source.read(min(_ZIP_CHUNK_SIZE, remaining))
+                                if not chunk:
+                                    _zip_changed(entry)
+                                compressed.write(chunk)
+                                remaining -= len(chunk)
+                                reporter.processed_bytes += len(chunk)
+                                reporter.emit(force=first_chunk)
+                                first_chunk = False
+                            reporter.checkpoint()
+                            if source.read(1) or not entry.unchanged(os.fstat(source.fileno())):
+                                _zip_changed(entry)
+                    reporter.files_completed += 1
+                    reporter.emit()
+                except OSError as exc:
+                    raise FormatWheelError(f"Could not read {entry.path.name}: {exc}") from exc
+            # Files processed earlier may have changed while later ones were read.
+            # Validation can take time on large selections or network drives, so
+            # show finalization before starting it and keep its details responsive.
+            reporter.emit("finalizing", force=True)
+            reporter.checkpoint()
+            for entry in entries:
+                reporter.checkpoint()
+                if not entry.directory:
+                    reporter.current_file = entry.name
+                    try:
+                        current = entry.path.stat()
+                    except OSError:
+                        _zip_changed(entry)
+                    if not entry.unchanged(current):
+                        _zip_changed(entry)
+                    reporter.emit()
+            reporter.checkpoint()
+        reporter.checkpoint()
+    reporter.current_file = ""
+    reporter.emit("completed", force=True)
     return RunResult([out])
 
 

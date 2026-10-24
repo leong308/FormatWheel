@@ -128,6 +128,22 @@ Outputs are written beside the source, with unique names to avoid overwriting ex
 
 The tray menu includes recent outputs, format/weapon icons, four character colors, three wheel sizes, sound, background blur, completion banners and launch-at-login. Settings are in `%APPDATA%\FormatWheel\settings.json`; the rolling log is `%LOCALAPPDATA%\FormatWheel\FormatWheel.log`.
 
+## Live ZIP progress
+
+Available in Windows build **1.0.0.windows.2** and newer. Quit the running tray app before installing an update.
+
+Creating a ZIP opens an animated progress panel. It first scans the selection to count files and source bytes, then shows measured progress while each file is compressed, including large single files. The percentage measures **source bytes processed**, rather than the changing size of the compressed ZIP. Hover over the byte counter to see exact byte counts.
+
+- **Pause / Resume** stops and continues the current job at a data-block boundary.
+- **Cancel** removes the unfinished archive and keeps the original files. Wait for the canceled message before starting another job.
+- **Folder** opens the destination folder while the job runs. When the ZIP is ready, **Show ZIP** reveals the finished archive.
+- **Fewer details / More details** toggles file counts, speed, elapsed time, estimated remaining time and archive size.
+- The **−** button hides the panel while compression continues. Restore it from the tray menu's **Show ZIP progress** action.
+
+Scanning and finalizing use an activity animation because their duration cannot be measured as an exact percentage. The panel shows 100% only after the ZIP directory has been written and the archive is closed. Remaining time is an estimate based on measured transfer speed; pausing does not reduce the reported transfer speed. Elapsed time includes the whole job, including pauses.
+
+If a selected file changes during compression, the job reports the change and removes the incomplete ZIP. Retry after that file has finished saving.
+
 ## Command line
 
 Use `FormatWheel-cli.exe` for visible console output:
@@ -140,6 +156,7 @@ Use `FormatWheel-cli.exe` for visible console output:
 .\FormatWheel-cli.exe --scan "C:\Files\photo.jpg"
 .\FormatWheel-cli.exe --doctor
 .\FormatWheel-cli.exe --snapshot wheel.png --files "C:\Files\photo.jpg" --page 1 --hover 6
+.\FormatWheel-cli.exe --zip-progress-snapshot zip-progress.png
 .\FormatWheel-cli.exe --weapons weapons.png
 .\FormatWheel-cli.exe --glyphs glyphs.png
 .\FormatWheel-cli.exe --sounds .\sounds

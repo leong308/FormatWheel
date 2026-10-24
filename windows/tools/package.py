@@ -73,8 +73,7 @@ model = ROOT / "windows/.tools/models/u2netp.onnx"
 if model.exists():
     (app / "models").mkdir(exist_ok=True)
     shutil.copy2(model, app / "models/u2netp.onnx")
-manifest = [str(p.relative_to(app)).replace("\\", "/") for p in app.rglob("*") if p.is_file()]
-manifest.append("installed-files.json")
+manifest = sorted({p.relative_to(app).as_posix() for p in app.rglob("*") if p.is_file()} | {"installed-files.json"})
 (app / "installed-files.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 portable = DIST / "FormatWheel-Windows-x64.zip"
 with zipfile.ZipFile(portable, "w", zipfile.ZIP_DEFLATED, compresslevel=5) as archive:
@@ -85,7 +84,7 @@ compiler = Path(os.environ["WINDIR"]) / "Microsoft.NET/Framework64/v4.0.30319/cs
 setup = DIST / "FormatWheel-Windows-x64-Setup.exe"
 subprocess.run([str(compiler), "/nologo", "/target:winexe", "/optimize+", f"/out:{setup}", "/r:System.Windows.Forms.dll", "/r:System.IO.Compression.dll", "/r:System.IO.Compression.FileSystem.dll", "/r:System.Web.Extensions.dll", "/r:Microsoft.CSharp.dll", f"/resource:{portable},payload.zip", str(ROOT / "windows/tools/Installer.cs")], check=True)
 source_zip = DIST / "FormatWheel-Windows-Source.zip"
-tracked = subprocess.check_output(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"], cwd=ROOT).decode().split("\0")
+tracked = subprocess.check_output(["git", "ls-files", "-z", "--cached"], cwd=ROOT).decode().split("\0")
 with zipfile.ZipFile(source_zip, "w", zipfile.ZIP_DEFLATED) as archive:
     for name in tracked:
         path = ROOT / name
