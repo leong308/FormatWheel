@@ -1,0 +1,805 @@
+{
+  "actions": {
+    "img.to.pdf": {
+      "id": "img.to.pdf",
+      "big": "PDF",
+      "ammo": "文档",
+      "title": "PDF",
+      "detail": "一张图一页，方便发送和打印"
+    },
+    "img.to.png": {
+      "id": "img.to.png",
+      "big": "PNG",
+      "ammo": "无损",
+      "title": "PNG",
+      "detail": "无损画质，支持透明背景"
+    },
+    "img.to.jpg": {
+      "id": "img.to.jpg",
+      "big": "JPG",
+      "ammo": "通用",
+      "title": "JPG",
+      "detail": "到哪都能打开，体积适中"
+    },
+    "img.to.heic": {
+      "id": "img.to.heic",
+      "big": "HEIC",
+      "ammo": "苹果",
+      "title": "HEIC",
+      "detail": "苹果相册格式，小而清晰"
+    },
+    "img.to.webp": {
+      "id": "img.to.webp",
+      "big": "WEBP",
+      "ammo": "网页",
+      "title": "WebP",
+      "detail": "网页常用，小体积高画质"
+    },
+    "img.to.avif": {
+      "id": "img.to.avif",
+      "big": "AVIF",
+      "ammo": "极小",
+      "title": "AVIF",
+      "detail": "新一代格式，体积最小（不保留透明）"
+    },
+    "img.to.gif": {
+      "id": "img.to.gif",
+      "big": "GIF",
+      "ammo": "256色",
+      "title": "GIF",
+      "detail": "老牌格式，只有 256 种颜色"
+    },
+    "img.to.tiff": {
+      "id": "img.to.tiff",
+      "big": "TIFF",
+      "ammo": "印刷",
+      "title": "TIFF",
+      "detail": "无损大文件，适合印刷和存档"
+    },
+    "img.compress": {
+      "id": "img.compress",
+      "symbol": "arrow.down.right.and.arrow.up.left",
+      "ammo": "压缩",
+      "title": "压缩",
+      "detail": "肉眼几乎看不出差别，体积大幅缩小"
+    },
+    "img.half": {
+      "id": "img.half",
+      "symbol": "minus.magnifyingglass",
+      "ammo": "缩小一半",
+      "title": "缩小一半",
+      "detail": "长宽各减半，体积约剩四分之一"
+    },
+    "img.cutout": {
+      "id": "img.cutout",
+      "symbol": "scissors",
+      "ammo": "抠图",
+      "title": "抠图",
+      "detail": "自动识别主体，去掉背景，导出透明 PNG"
+    },
+    "img.ocr": {
+      "id": "img.ocr",
+      "symbol": "text.viewfinder",
+      "ammo": "识字",
+      "title": "识字",
+      "detail": "认出图里的文字，直接复制到剪贴板"
+    },
+    "img.mono": {
+      "id": "img.mono",
+      "symbol": "circle.lefthalf.filled",
+      "ammo": "黑白",
+      "title": "黑白",
+      "detail": "一键变成黑白照片"
+    },
+    "img.rotate": {
+      "id": "img.rotate",
+      "symbol": "rotate.right",
+      "ammo": "旋转",
+      "title": "旋转",
+      "detail": "顺时针转 90°"
+    },
+    "img.strip": {
+      "id": "img.strip",
+      "symbol": "location.slash",
+      "ammo": "去隐私",
+      "title": "去隐私",
+      "detail": "抹掉 GPS 位置和拍摄信息，发图更安心"
+    },
+    "img.backdrop": {
+      "id": "img.backdrop",
+      "symbol": "photo.artframe",
+      "ammo": "加背景",
+      "title": "加背景",
+      "detail": "加渐变背景、圆角和阴影，截图秒变精致"
+    },
+    "pdf.to.png": {
+      "id": "pdf.to.png",
+      "big": "PNG",
+      "ammo": "每页一张",
+      "title": "PNG 图片",
+      "detail": "每页导出一张清晰图片"
+    },
+    "pdf.to.jpg": {
+      "id": "pdf.to.jpg",
+      "big": "JPG",
+      "ammo": "每页一张",
+      "title": "JPG 图片",
+      "detail": "每页一张，体积更小"
+    },
+    "pdf.to.long": {
+      "id": "pdf.to.long",
+      "big": "长图",
+      "ammo": "拼接",
+      "title": "长图",
+      "detail": "所有页面拼成一张长图，方便发朋友圈"
+    },
+    "pdf.to.docx": {
+      "id": "pdf.to.docx",
+      "big": "DOCX",
+      "ammo": "Word",
+      "title": "Word 文档",
+      "detail": "提取文字和格式，可以继续编辑"
+    },
+    "pdf.to.txt": {
+      "id": "pdf.to.txt",
+      "big": "TXT",
+      "ammo": "纯文字",
+      "title": "纯文本",
+      "detail": "只要文字，最干净"
+    },
+    "pdf.to.md": {
+      "id": "pdf.to.md",
+      "big": "MD",
+      "ammo": "Markdown",
+      "title": "Markdown",
+      "detail": "带标题层级的纯文本，适合喂给 AI"
+    },
+    "pdf.to.rtf": {
+      "id": "pdf.to.rtf",
+      "big": "RTF",
+      "ammo": "富文本",
+      "title": "RTF",
+      "detail": "保留基本格式的文本"
+    },
+    "pdf.to.html": {
+      "id": "pdf.to.html",
+      "big": "HTML",
+      "ammo": "网页",
+      "title": "HTML 网页",
+      "detail": "转成网页，浏览器直接打开"
+    },
+    "pdf.merge": {
+      "id": "pdf.merge",
+      "symbol": "square.stack.3d.down.right",
+      "ammo": "合并",
+      "title": "合并",
+      "detail": "把拖进来的 \\(count) 个 PDF 按顺序合成一个"
+    },
+    "pdf.compress": {
+      "id": "pdf.compress",
+      "symbol": "arrow.down.right.and.arrow.up.left",
+      "ammo": "压缩",
+      "title": "压缩",
+      "detail": "压缩里面的图片，体积变小"
+    },
+    "pdf.split": {
+      "id": "pdf.split",
+      "symbol": "scissors",
+      "ammo": "拆页",
+      "title": "拆页",
+      "detail": "每一页拆成单独的 PDF"
+    },
+    "pdf.rotate": {
+      "id": "pdf.rotate",
+      "symbol": "rotate.right",
+      "ammo": "旋转",
+      "title": "旋转",
+      "detail": "所有页面顺时针转 90°"
+    },
+    "pdf.mono": {
+      "id": "pdf.mono",
+      "symbol": "circle.lefthalf.filled",
+      "ammo": "黑白",
+      "title": "黑白",
+      "detail": "转成灰度，打印省彩墨"
+    },
+    "pdf.ocr": {
+      "id": "pdf.ocr",
+      "symbol": "text.viewfinder",
+      "ammo": "识字",
+      "title": "识字",
+      "detail": "扫描件也能认出文字，复制到剪贴板"
+    },
+    "pdf.strip": {
+      "id": "pdf.strip",
+      "detail": "抹掉作者、制作软件和创建时间，甩掉警察",
+      "title": "去隐私",
+      "ammo": "去隐私",
+      "symbol": "location.slash"
+    },
+    "vid.to.mp4": {
+      "id": "vid.to.mp4",
+      "big": "MP4",
+      "ammo": "通用",
+      "title": "MP4",
+      "detail": "最通用的视频格式"
+    },
+    "vid.to.mov": {
+      "id": "vid.to.mov",
+      "big": "MOV",
+      "ammo": "苹果",
+      "title": "MOV",
+      "detail": "苹果剪辑软件最爱"
+    },
+    "vid.to.hevc": {
+      "id": "vid.to.hevc",
+      "big": "HEVC",
+      "ammo": "H.265",
+      "title": "HEVC / H.265",
+      "detail": "画质不变，体积约减半"
+    },
+    "vid.to.webm": {
+      "id": "vid.to.webm",
+      "big": "WEBM",
+      "ammo": "网页",
+      "title": "WebM",
+      "detail": "网页播放用的开源格式"
+    },
+    "vid.to.gif": {
+      "id": "vid.to.gif",
+      "big": "GIF",
+      "ammo": "动图",
+      "title": "GIF 动图",
+      "detail": "转成动图（最多取前 30 秒）"
+    },
+    "vid.to.mp3": {
+      "id": "vid.to.mp3",
+      "big": "MP3",
+      "ammo": "提取音频",
+      "title": "MP3 音频",
+      "detail": "只要声音，最通用"
+    },
+    "vid.to.m4a": {
+      "id": "vid.to.m4a",
+      "big": "M4A",
+      "ammo": "提取音频",
+      "title": "M4A 音频",
+      "detail": "只要声音，苹果设备友好"
+    },
+    "vid.to.wav": {
+      "id": "vid.to.wav",
+      "big": "WAV",
+      "ammo": "无损音频",
+      "title": "WAV 音频",
+      "detail": "只要声音，无损大文件"
+    },
+    "vid.fast": {
+      "id": "vid.fast",
+      "big": "2×",
+      "ammo": "加速",
+      "title": "2 倍速",
+      "detail": "整体加速一倍，声音同步变快"
+    },
+    "vid.slow": {
+      "id": "vid.slow",
+      "symbol": "tortoise.fill",
+      "ammo": "慢放",
+      "title": "慢放",
+      "detail": "0.5 倍速，就像开了子弹时间"
+    },
+    "vid.compress": {
+      "id": "vid.compress",
+      "symbol": "arrow.down.right.and.arrow.up.left",
+      "ammo": "压缩",
+      "title": "压缩"
+    },
+    "vid.mute": {
+      "id": "vid.mute",
+      "symbol": "speaker.slash.fill",
+      "ammo": "静音",
+      "title": "静音",
+      "detail": "去掉声音，画面不动"
+    },
+    "vid.720p": {
+      "id": "vid.720p",
+      "big": "720P",
+      "ammo": "降分辨率",
+      "title": "720P",
+      "detail": "缩到 720P，发消息更快"
+    },
+    "vid.cover": {
+      "id": "vid.cover",
+      "symbol": "photo",
+      "ammo": "封面",
+      "title": "截封面",
+      "detail": "截取一帧存成 JPG"
+    },
+    "vid.strip": {
+      "id": "vid.strip",
+      "detail": "抹掉拍摄地点、机型和时间，不重新压缩",
+      "title": "去隐私",
+      "ammo": "去隐私",
+      "symbol": "location.slash"
+    },
+    "aud.to.mp3": {
+      "id": "aud.to.mp3",
+      "big": "MP3",
+      "ammo": "通用",
+      "title": "MP3",
+      "detail": "最通用的音频格式"
+    },
+    "aud.to.m4a": {
+      "id": "aud.to.m4a",
+      "big": "M4A",
+      "ammo": "AAC",
+      "title": "M4A",
+      "detail": "苹果默认，同体积音质更好"
+    },
+    "aud.to.wav": {
+      "id": "aud.to.wav",
+      "big": "WAV",
+      "ammo": "无损",
+      "title": "WAV",
+      "detail": "无损大文件，剪辑常用"
+    },
+    "aud.to.flac": {
+      "id": "aud.to.flac",
+      "big": "FLAC",
+      "ammo": "无损压缩",
+      "title": "FLAC",
+      "detail": "无损，体积约为 WAV 的一半"
+    },
+    "aud.to.aiff": {
+      "id": "aud.to.aiff",
+      "big": "AIFF",
+      "ammo": "苹果无损",
+      "title": "AIFF",
+      "detail": "苹果的无损格式"
+    },
+    "aud.to.opus": {
+      "id": "aud.to.opus",
+      "big": "OPUS",
+      "ammo": "极小",
+      "title": "Opus",
+      "detail": "体积极小，人声特别清晰"
+    },
+    "aud.to.alac": {
+      "id": "aud.to.alac",
+      "big": "ALAC",
+      "ammo": "苹果无损",
+      "title": "ALAC",
+      "detail": "苹果无损压缩，音乐 App 直接播"
+    },
+    "aud.to.m4r": {
+      "id": "aud.to.m4r",
+      "symbol": "bell.fill",
+      "ammo": "铃声",
+      "title": "iPhone 铃声",
+      "detail": "截取前 40 秒，做成 iPhone 铃声"
+    },
+    "aud.compress": {
+      "id": "aud.compress",
+      "symbol": "arrow.down.right.and.arrow.up.left",
+      "ammo": "压缩",
+      "title": "压缩",
+      "detail": "转成 96 kbps AAC，体积极小"
+    },
+    "aud.mono": {
+      "id": "aud.mono",
+      "symbol": "speaker.wave.1.fill",
+      "ammo": "单声道",
+      "title": "单声道",
+      "detail": "左右声道合成一个"
+    },
+    "aud.loud": {
+      "id": "aud.loud",
+      "symbol": "speaker.wave.3.fill",
+      "ammo": "响度统一",
+      "title": "响度统一",
+      "detail": "音量拉到标准响度，不再忽大忽小"
+    },
+    "aud.fast": {
+      "id": "aud.fast",
+      "big": "1.5×",
+      "ammo": "加速",
+      "title": "1.5 倍速",
+      "detail": "整体加速，听播客更快"
+    },
+    "doc.to.pdf": {
+      "id": "doc.to.pdf",
+      "big": "PDF",
+      "ammo": "打印",
+      "title": "PDF",
+      "detail": "排版固定，发给谁看都一样"
+    },
+    "doc.to.docx": {
+      "id": "doc.to.docx",
+      "big": "DOCX",
+      "ammo": "Word",
+      "title": "Word 文档",
+      "detail": "最常见的可编辑文档"
+    },
+    "doc.to.txt": {
+      "id": "doc.to.txt",
+      "big": "TXT",
+      "ammo": "纯文字",
+      "title": "纯文本",
+      "detail": "只要文字，最干净"
+    },
+    "doc.to.md": {
+      "id": "doc.to.md",
+      "big": "MD",
+      "ammo": "Markdown",
+      "title": "Markdown",
+      "detail": "带标题层级的纯文本，适合喂给 AI"
+    },
+    "doc.to.html": {
+      "id": "doc.to.html",
+      "big": "HTML",
+      "ammo": "网页",
+      "title": "HTML 网页",
+      "detail": "浏览器直接打开"
+    },
+    "doc.to.rtf": {
+      "id": "doc.to.rtf",
+      "big": "RTF",
+      "ammo": "富文本",
+      "title": "RTF",
+      "detail": "保留基本格式的文本"
+    },
+    "doc.to.odt": {
+      "id": "doc.to.odt",
+      "big": "ODT",
+      "ammo": "开源",
+      "title": "ODT",
+      "detail": "LibreOffice / WPS 的开放格式"
+    },
+    "doc.to.doc": {
+      "id": "doc.to.doc",
+      "big": "DOC",
+      "ammo": "旧版",
+      "title": "旧版 Word",
+      "detail": "兼容老版本 Office"
+    },
+    "doc.strip": {
+      "id": "doc.strip",
+      "detail": "抹掉作者、修改人和公司名",
+      "title": "去隐私",
+      "ammo": "去隐私",
+      "symbol": "location.slash"
+    },
+    "doc.count": {
+      "id": "doc.count",
+      "symbol": "textformat.123",
+      "ammo": "字数",
+      "title": "字数统计",
+      "detail": "数一数一共多少字"
+    },
+    "doc.copy": {
+      "id": "doc.copy",
+      "symbol": "doc.on.clipboard",
+      "ammo": "复制全文",
+      "title": "复制全文",
+      "detail": "把文字全部复制到剪贴板"
+    },
+    "gen.zip": {
+      "id": "gen.zip",
+      "symbol": "doc.zipper",
+      "ammo": "压缩包",
+      "title": "打包 ZIP",
+      "detail": "打包成 .zip 压缩包"
+    },
+    "gen.path": {
+      "id": "gen.path",
+      "symbol": "link",
+      "ammo": "复制路径",
+      "title": "复制路径",
+      "detail": "把文件路径复制到剪贴板"
+    },
+    "gen.sha": {
+      "id": "gen.sha",
+      "symbol": "number",
+      "ammo": "SHA-256",
+      "title": "SHA-256",
+      "detail": "算出校验值并复制"
+    },
+    "gen.name": {
+      "id": "gen.name",
+      "symbol": "character.cursor.ibeam",
+      "ammo": "复制文件名",
+      "title": "复制文件名",
+      "detail": "把文件名复制到剪贴板"
+    }
+  },
+  "traits": {
+    "image": {
+      "png": [
+        1.0,
+        0.35,
+        1.0,
+        1.0
+      ],
+      "jpg": [
+        0.74,
+        0.78,
+        1.0,
+        0.0
+      ],
+      "heic": [
+        0.84,
+        0.9,
+        0.55,
+        1.0
+      ],
+      "webp": [
+        0.8,
+        0.86,
+        0.82,
+        1.0
+      ],
+      "avif": [
+        0.86,
+        0.95,
+        0.6,
+        0.0
+      ],
+      "pdf": [
+        1.0,
+        0.4,
+        0.95,
+        1.0
+      ],
+      "gif": [
+        0.3,
+        0.55,
+        1.0,
+        0.5
+      ],
+      "tiff": [
+        1.0,
+        0.2,
+        0.7,
+        1.0
+      ],
+      "bmp": [
+        1.0,
+        0.05,
+        0.85,
+        0.0
+      ],
+      "other": [
+        0.92,
+        0.3,
+        0.45,
+        0.5
+      ]
+    },
+    "pdf": {
+      "pdf": [
+        1.0,
+        0.15,
+        0.6,
+        0.95
+      ],
+      "png": [
+        0.95,
+        0.0,
+        0.4,
+        1.0
+      ],
+      "jpg": [
+        0.88,
+        0.0,
+        0.72,
+        1.0
+      ],
+      "long": [
+        0.9,
+        0.0,
+        0.62,
+        1.0
+      ],
+      "docx": [
+        0.55,
+        0.95,
+        0.7,
+        0.9
+      ],
+      "txt": [
+        0.08,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "md": [
+        0.35,
+        1.0,
+        0.95,
+        0.8
+      ],
+      "rtf": [
+        0.5,
+        0.9,
+        0.6,
+        0.75
+      ],
+      "html": [
+        0.45,
+        0.8,
+        0.75,
+        0.95
+      ]
+    },
+    "video": {
+      "mp4": [
+        0.85,
+        0.7,
+        1.0
+      ],
+      "m4v": [
+        0.85,
+        0.7,
+        0.9
+      ],
+      "mov": [
+        0.95,
+        0.45,
+        0.75
+      ],
+      "hevc": [
+        0.9,
+        0.88,
+        0.7
+      ],
+      "webm": [
+        0.82,
+        0.85,
+        0.7
+      ],
+      "mkv": [
+        0.9,
+        0.72,
+        0.5
+      ],
+      "avi": [
+        0.7,
+        0.4,
+        0.55
+      ],
+      "gif": [
+        0.2,
+        0.1,
+        1.0
+      ],
+      "mp3": [
+        0.0,
+        0.97,
+        1.0
+      ],
+      "m4a": [
+        0.0,
+        0.96,
+        0.92
+      ],
+      "wav": [
+        0.0,
+        0.8,
+        0.95
+      ],
+      "other": [
+        0.8,
+        0.6,
+        0.5
+      ]
+    },
+    "audio": {
+      "mp3": [
+        0.7,
+        0.8,
+        1.0
+      ],
+      "m4a": [
+        0.8,
+        0.82,
+        0.92
+      ],
+      "aac": [
+        0.78,
+        0.82,
+        0.85
+      ],
+      "wav": [
+        1.0,
+        0.0,
+        0.95
+      ],
+      "aiff": [
+        1.0,
+        0.0,
+        0.7
+      ],
+      "flac": [
+        1.0,
+        0.5,
+        0.65
+      ],
+      "opus": [
+        0.82,
+        0.92,
+        0.55
+      ],
+      "alac": [
+        1.0,
+        0.45,
+        0.7
+      ],
+      "m4r": [
+        0.8,
+        0.82,
+        0.4
+      ],
+      "caf": [
+        0.95,
+        0.3,
+        0.4
+      ],
+      "other": [
+        0.75,
+        0.6,
+        0.5
+      ]
+    },
+    "doc": {
+      "pdf": [
+        1.0,
+        0.15,
+        1.0
+      ],
+      "docx": [
+        0.85,
+        1.0,
+        0.95
+      ],
+      "doc": [
+        0.75,
+        0.9,
+        0.85
+      ],
+      "txt": [
+        0.1,
+        1.0,
+        1.0
+      ],
+      "md": [
+        0.4,
+        1.0,
+        0.75
+      ],
+      "html": [
+        0.7,
+        0.8,
+        0.95
+      ],
+      "rtf": [
+        0.75,
+        0.9,
+        0.8
+      ],
+      "rtfd": [
+        0.8,
+        0.9,
+        0.6
+      ],
+      "odt": [
+        0.8,
+        0.95,
+        0.6
+      ],
+      "other": [
+        0.6,
+        0.8,
+        0.6
+      ]
+    }
+  }
+}
